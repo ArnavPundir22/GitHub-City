@@ -14,7 +14,7 @@
     You can simply drag and drop your video file into the GitHub markdown editor to generate a link!
   -->
   <a href="https://arnavpundir22.github.io/GitHub-City/" target="_blank">
-    <video src="/public/video/City.mp4" width="100%" autoplay loop muted playsinline style="border-radius: 12px; border: 1px solid #30363d; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer;"></video>
+    <video src="./public/video/City.mp4" width="100%" autoplay loop muted playsinline style="border-radius: 12px; border: 1px solid #30363d; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer;"></video>
   </a>
   <p align="center">
     <em>Explore the 3D cyberpunk city of any GitHub user.</em>
