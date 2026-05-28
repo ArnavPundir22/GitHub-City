@@ -7,6 +7,7 @@
 [![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite)](https://vitejs.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
+<!-- markdownlint-disable MD033 -->
 <br />
 <div align="center">
   <!-- 
@@ -22,6 +23,7 @@
   <b><a href="https://arnavpundir22.github.io/GitHub-City/" target="_blank">Enter the City ↗</a></b>
 </div>
 <br />
+<!-- markdownlint-enable MD033 -->
 
 ---
 
