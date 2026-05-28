@@ -9,7 +9,7 @@ const tempColor = new THREE.Color();
 
 // ─── Window color based on weekly commits ────────────────────────────────────
 function getWindowColor(commits, peak) {
-  if (commits === 0) return '#050810';
+  if (commits === 0) return '#030508';
   const ratio = Math.min(commits / Math.max(peak, 1), 1);
   if (ratio < 0.15) return '#ffd27f';
   if (ratio < 0.4)  return '#ffb347';
@@ -148,7 +148,9 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
         tempObject.updateMatrix();
         
         instancedMeshRef.current.setMatrixAt(i, tempObject.matrix);
-        instancedMeshRef.current.setColorAt(i, tempColor.set(win.color));
+        // Multiply color scalar so it blooms (value > 1)
+        const intensity = win.color === '#030508' ? 1 : 2.5;
+        instancedMeshRef.current.setColorAt(i, tempColor.set(win.color).multiplyScalar(intensity));
       });
       instancedMeshRef.current.instanceMatrix.needsUpdate = true;
       if (instancedMeshRef.current.instanceColor) {
@@ -174,10 +176,13 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
         />
       </mesh>
 
-      {/* Podium step */}
+      {/* Podium step with glowing trim */}
       <mesh position={[0, 0.72, 0]} castShadow receiveShadow>
         <boxGeometry args={[baseW + 0.5, 0.08, baseD + 0.5]} />
-        <meshStandardMaterial color="#1a1a24" roughness={0.2} metalness={0.9} />
+        <meshStandardMaterial 
+          color="#1a1a24" roughness={0.2} metalness={0.9} 
+          emissive={accentColor} emissiveIntensity={0.8} toneMapped={false}
+        />
       </mesh>
 
       {/* ── Lower tower body ── */}
@@ -228,6 +233,12 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
           emissive={accentColor} emissiveIntensity={0.25} />
       </mesh>
 
+      {/* ── Roof perimeter trim ── */}
+      <mesh position={[0, actualHeight + 0.76, 0]}>
+        <boxGeometry args={[topW + 0.05, 0.05, topD + 0.05]} />
+        <meshStandardMaterial color={accentColor} emissive={accentColor} emissiveIntensity={1.5} toneMapped={false} />
+      </mesh>
+
       {/* ── Antenna spire ── */}
       <mesh position={[0, actualHeight + 0.76 + 0.7 + 1.8, 0]} castShadow>
         <cylinderGeometry args={[0.018, 0.055, 3.5, 8]} />
@@ -237,8 +248,33 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
       {/* ── Antenna red beacon (Faked light via emissive material) ── */}
       <mesh position={[0, actualHeight + 0.76 + 0.7 + 3.6, 0]}>
         <sphereGeometry args={[0.09, 8, 8]} />
-        <meshStandardMaterial ref={antennaMatRef} color="#ff1010" emissive="#ff0000" emissiveIntensity={3} toneMapped={false} />
+        <meshStandardMaterial ref={antennaMatRef} color="#ff1010" emissive="#ff0000" emissiveIntensity={5} toneMapped={false} />
       </mesh>
+
+      {/* ── Large Neon Language Sign on Facade ── */}
+      {repo.language && (
+        <group position={[0, setbackAt * floorHeight + (floorCount - setbackAt) * floorHeight * 0.5 + 0.76, 0]}>
+          {/* Front face sign */}
+          <Text
+            position={[0, 0, topD / 2 + 0.05]}
+            fontSize={topW * 0.35}
+            color={new THREE.Color(langHex).multiplyScalar(2.5)}
+            anchorX="center" anchorY="middle"
+          >
+            {repo.language.toUpperCase()}
+          </Text>
+          {/* Back face sign */}
+          <Text
+            position={[0, 0, -topD / 2 - 0.05]}
+            rotation={[0, Math.PI, 0]}
+            fontSize={topW * 0.35}
+            color={new THREE.Color(langHex).multiplyScalar(2.5)}
+            anchorX="center" anchorY="middle"
+          >
+            {repo.language.toUpperCase()}
+          </Text>
+        </group>
+      )}
 
       {/* ── Repo name label ── */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
@@ -251,14 +287,6 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
           maxWidth={8}
         >
           {repo.name}
-        </Text>
-        <Text
-          position={[0, actualHeight + 0.76 + 0.7 + 3.6, 0]}
-          fontSize={0.32}
-          color={langHex}
-          anchorX="center" anchorY="middle"
-        >
-          {repo.language || 'Unknown'} · ⭐{repo.stars}
         </Text>
       </Billboard>
     </group>
