@@ -7,6 +7,22 @@
 [![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite)](https://vitejs.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
+<br />
+<div align="center">
+  <!-- 
+    DEMO WINDOW: Replace 'YOUR_VIDEO_LINK_HERE.mp4' with the actual link to your video.
+    You can simply drag and drop your video file into the GitHub markdown editor to generate a link!
+  -->
+  <a href="https://arnavpundir22.github.io/GitHub-City/" target="_blank">
+    <video src="/public/video/City.mp4" width="100%" autoplay loop muted playsinline style="border-radius: 12px; border: 1px solid #30363d; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer;"></video>
+  </a>
+  <p align="center">
+    <em>Explore the 3D cyberpunk city of any GitHub user.</em>
+  </p>
+  <b><a href="https://arnavpundir22.github.io/GitHub-City/" target="_blank">Enter the City ↗</a></b>
+</div>
+<br />
+
 ---
 
 ## ✨ What Is This?
@@ -37,7 +53,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** in your browser, type any GitHub username, and click **Explore City**.
+Open **<http://localhost:5173>** in your browser, type any GitHub username, and click **Explore City**.
 
 ---
 
