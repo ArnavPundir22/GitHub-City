@@ -45,12 +45,12 @@ Open **http://localhost:5173** in your browser, type any GitHub username, and cl
 
 - 🏙️ **Full personal city** — one building per repository (up to 300+ repos via pagination)
 - 📐 **Realistic skyscraper geometry** — podium base, lower/upper tower with setback, floor slabs, rooftop penthouse, antenna spire
-- 💡 **Commit-driven window lighting** — 52-week participation data mapped to individual windows across all 4 building faces
-- 🎨 **Language accent colors** — 20+ programming languages, each with GitHub's official color palette
+- 💡 **Commit-driven window lighting** — 52-week participation data mapped to individual windows across all 4 building faces, glowing brightly via bloom
+- 🎨 **Neon language signs** — massive glowing corporate-style holograms on building facades using GitHub's language color palette
 - 🔍 **Bi-directional hover** — hover a 3D building to highlight its card in the sidebar, or hover a sidebar card to highlight the building
 - 📊 **Rich sidebar** — avatar, bio, location, repo list with sparklines, stats, window legend
 - ⚡ **Rise animation** — buildings grow up from the ground when a city loads
-- 🌌 **Cinematic atmosphere** — hemisphere sky lighting, moonlight, 4 corner rim lights, 8000-star skybox, volumetric fog
+- 🌌 **Cyberpunk atmosphere** — deep void sky, volumetric fog, neon rim lights, and full-screen bloom post-processing
 - 🔄 **Switch cities** — search any new username to instantly replace the current city
 - ⚠️ **Rate-limit aware** — graceful fallback to estimated activity when GitHub API is busy
 
@@ -101,7 +101,7 @@ github-city/
 |---|---|
 | Framework | React 19 |
 | 3D Engine | Three.js 0.184 via React Three Fiber 9 |
-| 3D Helpers | React Three Drei 10 |
+| 3D Helpers | React Three Drei 10 & Postprocessing |
 | Build Tool | Vite 8 |
 | HTTP Client | Axios |
 | Icons | Lucide React |

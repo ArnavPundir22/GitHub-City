@@ -146,9 +146,7 @@ function windowLight(commits, peakWeek) {
 }
 ```
 
-Intensity applies as `emissiveIntensity` on `MeshStandardMaterial`. The window frame color is:
-- `#b8923a` (warm brass) when lit
-- `#080c18` (near-black) when dark
+To trigger the bloom post-processing effect, the window's color RGB values are multiplied by an intensity factor (e.g., `2.5`), pushing the luminance over the bloom threshold. This is applied to an `InstancedMesh` with a simple `MeshBasicMaterial`.
 
 ---
 
@@ -170,12 +168,10 @@ Each building gets a glow color based on the repo's primary language, using GitH
 | Vue | `#41b883` | Svelte | `#ff3e00` |
 | *(other)* | `#00eeff` | | |
 
-The accent color is applied to:
-1. **Podium** — `emissiveIntensity: 0.2`
-2. **Lower tower** — `emissiveIntensity: 0.04`
-3. **Upper tower** — `emissiveIntensity: 0.07`
-4. **Rooftop penthouse** — `emissiveIntensity: 0.15`
-5. **Base point light** — intensity scales with commit activity: `0.8 + actRatio × 1.5`
+The accent color is applied as a glowing emission to:
+1. **Podium Trim** — `emissiveIntensity: 0.8` (un-tone-mapped)
+2. **Rooftop Perimeter Trim** — `emissiveIntensity: 1.5` (un-tone-mapped)
+3. **Facade Language Sign** — color multiplied by 2.5 for bloom
 
 ---
 
@@ -244,17 +240,31 @@ This causes the building to appear slightly wider/closer without affecting its h
 
 ---
 
-## Billboard Labels
+## Labels and Signs
 
-Each building has two text labels that always face the camera (using React Three Drei's `<Billboard>`):
+### Neon Language Facade Signs
 
+Instead of a small tag, the primary programming language is rendered as a massive, glowing corporate logo directly on the front and back faces of the upper tower block:
+
+```js
+<Text
+  position={[0, 0, ±(topD / 2 + 0.05)]}
+  fontSize={topW * 0.35}
+  color={new THREE.Color(langHex).multiplyScalar(2.5)}
+>
+  {language.toUpperCase()}
+</Text>
 ```
+By multiplying the text color scalar above 1.0, the `<Bloom>` post-processing pass catches the text and creates a stunning neon glow.
+
+### Repo Name Billboard
+
+The repo name is rendered as a floating billboard that always faces the camera, placed above the antenna tip:
+
+```js
 Repo name:     fontSize=0.55, color=#ffffff (hovered) / #cccccc (normal)
                outlineWidth=0.03, outlineColor=#000000
                position: just above the antenna tip
-
-Language·⭐stars: fontSize=0.32, color=langHex
-               position: just below the name
 ```
 
 Labels are rendered using `troika-three-text` (bundled with Drei) with signed distance field text for crisp rendering at any zoom level.
