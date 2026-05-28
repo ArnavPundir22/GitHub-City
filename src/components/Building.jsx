@@ -1,63 +1,39 @@
-import React, { useRef, useMemo, useState, useCallback } from 'react';
+import React, { useRef, useMemo, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { getLangColor } from '../utils/github';
 
+const tempObject = new THREE.Object3D();
+const tempColor = new THREE.Color();
+
 // ─── Window color based on weekly commits ────────────────────────────────────
-function windowLight(commits, peak) {
-  if (commits === 0) return { color: new THREE.Color('#050810'), intensity: 0 };
+function getWindowColor(commits, peak) {
+  if (commits === 0) return '#050810';
   const ratio = Math.min(commits / Math.max(peak, 1), 1);
-  if (ratio < 0.15) return { color: new THREE.Color('#ffd27f'), intensity: 0.6 };
-  if (ratio < 0.4)  return { color: new THREE.Color('#ffb347'), intensity: 1.1 };
-  if (ratio < 0.75) return { color: new THREE.Color('#fff176'), intensity: 1.8 };
-  return               { color: new THREE.Color('#ffffff'),   intensity: 3.0 };
+  if (ratio < 0.15) return '#ffd27f';
+  if (ratio < 0.4)  return '#ffb347';
+  if (ratio < 0.75) return '#fff176';
+  return '#ffffff';
 }
 
-// ─── Single Window mesh ───────────────────────────────────────────────────────
-function Window({ position, commits, peak }) {
-  const { color, intensity } = windowLight(commits, peak);
-  return (
-    <mesh position={position}>
-      <boxGeometry args={[0.2, 0.28, 0.03]} />
-      <meshStandardMaterial
-        color={intensity > 0 ? '#b8923a' : '#080c18'}
-        emissive={color}
-        emissiveIntensity={intensity}
-        roughness={0.05}
-        metalness={0.2}
-      />
-    </mesh>
-  );
-}
-
-// ─── A face of windows mapped to weekly commits ───────────────────────────────
-function WindowFace({ weeklyCommits, peak, floorCount, winsPerRow, floorHeight, faceW, offsetZ, weekOffset = 0 }) {
-  const windows = useMemo(() => {
-    const items = [];
-    const totalWindows = floorCount * winsPerRow;
-    for (let f = 0; f < floorCount; f++) {
-      const y = f * floorHeight + floorHeight * 0.5;
-      for (let w = 0; w < winsPerRow; w++) {
-        const winIdx = f * winsPerRow + w;
-        // Map window index → week index (52 weeks spread across all windows)
-        const weekIdx = Math.floor((winIdx / totalWindows) * weeklyCommits.length) + weekOffset;
-        const commits = weeklyCommits[Math.min(weekIdx, weeklyCommits.length - 1)] || 0;
-        const xSpacing = faceW / (winsPerRow + 1);
-        const x = (w + 1) * xSpacing - faceW / 2;
-        items.push({ x, y, commits, key: `${f}-${w}` });
-      }
+function generateWindowsForFace(weeklyCommits, peak, floorCount, winsPerRow, floorHeight, faceW, offsetZ, rotationY, weekOffset = 0, baseY = 0) {
+  const windows = [];
+  const totalWindows = floorCount * winsPerRow;
+  for (let f = 0; f < floorCount; f++) {
+    const y = baseY + f * floorHeight + floorHeight * 0.5;
+    for (let w = 0; w < winsPerRow; w++) {
+      const winIdx = f * winsPerRow + w;
+      // Map window index → week index (52 weeks spread across all windows)
+      const weekIdx = Math.floor((winIdx / totalWindows) * weeklyCommits.length) + weekOffset;
+      const commits = weeklyCommits[Math.min(weekIdx, weeklyCommits.length - 1)] || 0;
+      const xSpacing = faceW / (winsPerRow + 1);
+      const x = (w + 1) * xSpacing - faceW / 2;
+      
+      windows.push({ x, y, z: offsetZ, rotationY, color: getWindowColor(commits, peak) });
     }
-    return items;
-  }, [weeklyCommits, floorCount, winsPerRow, floorHeight, faceW, weekOffset]);
-
-  return (
-    <group>
-      {windows.map(({ x, y, commits, key }) => (
-        <Window key={key} position={[x, y, offsetZ]} commits={commits} peak={peak} />
-      ))}
-    </group>
-  );
+  }
+  return windows;
 }
 
 // ─── Floor slab ───────────────────────────────────────────────────────────────
@@ -72,9 +48,10 @@ function FloorSlab({ y, w, d }) {
 
 // ─── Main Building (represents one GitHub repo) ───────────────────────────────
 export default function Building({ repo, position, isHovered, onPointerOver, onPointerOut }) {
-  const groupRef   = useRef();
-  const antennaRef = useRef();
-  const riseRef    = useRef(0); // 0→1 animation progress
+  const groupRef      = useRef();
+  const antennaMatRef = useRef();
+  const instancedMeshRef = useRef();
+  const riseRef       = useRef(0); // 0→1 animation progress
 
   // Rise-in animation on mount
   useFrame((_, delta) => {
@@ -85,10 +62,10 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
         groupRef.current.position.y = -(1 - riseRef.current) * 2;
       }
     }
-    // Blinking antenna
-    if (antennaRef.current) {
-      const blink = Math.sin(Date.now() * 0.005) > 0 ? 1.5 : 0;
-      antennaRef.current.intensity = blink;
+    // Blinking antenna emissive
+    if (antennaMatRef.current) {
+      const blink = Math.sin(Date.now() * 0.005) > 0 ? 3 : 0.5;
+      antennaMatRef.current.emissiveIntensity = blink;
     }
   });
 
@@ -116,11 +93,6 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
   const langHex    = getLangColor(repo.language);
   const accentColor = new THREE.Color(langHex);
 
-  // Activity ratio for glow intensity
-  const weeklyMax   = repo.peakWeek || 1;
-  const totalC      = repo.totalCommits || 0;
-  const actRatio    = Math.min(totalC / 100, 1);
-
   // Hover scale
   const hoverScale = isHovered ? 1.04 : 1.0;
 
@@ -138,6 +110,52 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
   const splitIdx   = Math.floor(repo.weeklyCommits.length * 0.6);
   const baseWeeks  = repo.weeklyCommits.slice(0, splitIdx);
   const topWeeks   = repo.weeklyCommits.slice(splitIdx);
+  const weeklyMax  = repo.peakWeek || 1;
+
+  // ── Generate All Windows for InstancedMesh ───────────────────────────────
+  const allWindows = useMemo(() => {
+    const arr = [];
+    
+    // Base front/back (0.76 is the starting Y offset of the lower tower)
+    arr.push(...generateWindowsForFace(baseWeeks, weeklyMax, setbackAt, 4, floorHeight, baseW, baseD / 2 + 0.025, 0, 0, 0.76));
+    arr.push(...generateWindowsForFace(baseWeeks, weeklyMax, setbackAt, 4, floorHeight, baseW, -(baseD / 2 + 0.025), Math.PI, 0, 0.76));
+    
+    // Base left/right
+    arr.push(...generateWindowsForFace(baseWeeks, weeklyMax, setbackAt, 3, floorHeight, baseD, baseW / 2 + 0.025, Math.PI / 2, Math.floor(baseWeeks.length / 2), 0.76));
+    arr.push(...generateWindowsForFace(baseWeeks, weeklyMax, setbackAt, 3, floorHeight, baseD, -(baseW / 2 + 0.025), -Math.PI / 2, Math.floor(baseWeeks.length / 3), 0.76));
+
+    // Top front/back
+    const topBaseY = setbackAt * floorHeight + 0.76;
+    const topCount = floorCount - setbackAt;
+    arr.push(...generateWindowsForFace(topWeeks, weeklyMax, topCount, 3, floorHeight, topW, topD / 2 + 0.025, 0, 0, topBaseY));
+    arr.push(...generateWindowsForFace(topWeeks, weeklyMax, topCount, 3, floorHeight, topW, -(topD / 2 + 0.025), Math.PI, 0, topBaseY));
+    
+    // Top left/right
+    arr.push(...generateWindowsForFace(topWeeks, weeklyMax, topCount, 2, floorHeight, topD, topW / 2 + 0.025, Math.PI / 2, Math.floor(topWeeks.length / 2), topBaseY));
+    arr.push(...generateWindowsForFace(topWeeks, weeklyMax, topCount, 2, floorHeight, topD, -(topW / 2 + 0.025), -Math.PI / 2, Math.floor(topWeeks.length / 3), topBaseY));
+    
+    return arr;
+  }, [baseWeeks, topWeeks, weeklyMax, setbackAt, floorCount, floorHeight, baseW, baseD, topW, topD]);
+
+  // Apply matrix and color to instanced mesh
+  useLayoutEffect(() => {
+    if (instancedMeshRef.current) {
+      allWindows.forEach((win, i) => {
+        tempObject.position.set(0, win.y, 0); // Start at Y level
+        tempObject.rotation.set(0, win.rotationY, 0); // Apply face rotation
+        tempObject.translateX(win.x); // Move along local X
+        tempObject.translateZ(win.z); // Move along local Z
+        tempObject.updateMatrix();
+        
+        instancedMeshRef.current.setMatrixAt(i, tempObject.matrix);
+        instancedMeshRef.current.setColorAt(i, tempColor.set(win.color));
+      });
+      instancedMeshRef.current.instanceMatrix.needsUpdate = true;
+      if (instancedMeshRef.current.instanceColor) {
+        instancedMeshRef.current.instanceColor.needsUpdate = true;
+      }
+    }
+  }, [allWindows]);
 
   return (
     <group
@@ -152,7 +170,7 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
         <boxGeometry args={[baseW + 1.2, 0.7, baseD + 1.2]} />
         <meshStandardMaterial
           color="#0f0f17" roughness={0.3} metalness={0.85}
-          emissive={accentColor} emissiveIntensity={0.2}
+          emissive={accentColor} emissiveIntensity={0.3}
         />
       </mesh>
 
@@ -170,7 +188,7 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
         <boxGeometry args={[baseW, setbackAt * floorHeight, baseD]} />
         <meshStandardMaterial
           color="#111120" roughness={0.25} metalness={0.88}
-          emissive={accentColor} emissiveIntensity={0.04}
+          emissive={accentColor} emissiveIntensity={0.06}
         />
       </mesh>
 
@@ -186,7 +204,7 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
         <boxGeometry args={[topW, (floorCount - setbackAt) * floorHeight, topD]} />
         <meshStandardMaterial
           color="#0c0c18" roughness={0.2} metalness={0.92}
-          emissive={accentColor} emissiveIntensity={0.07}
+          emissive={accentColor} emissiveIntensity={0.09}
         />
       </mesh>
 
@@ -195,48 +213,19 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
         <FloorSlab key={s.key} y={s.y + 0.76} w={s.w} d={s.d} />
       ))}
 
-      {/* ── WINDOWS: Lower base (front/back) ── */}
-      <group position={[0, 0.76, 0]}>
-        <WindowFace weeklyCommits={baseWeeks} peak={weeklyMax}
-          floorCount={setbackAt} winsPerRow={4} floorHeight={floorHeight}
-          faceW={baseW} offsetZ={baseD / 2 + 0.025} />
-        <WindowFace weeklyCommits={baseWeeks} peak={weeklyMax}
-          floorCount={setbackAt} winsPerRow={4} floorHeight={floorHeight}
-          faceW={baseW} offsetZ={-(baseD / 2 + 0.025)} />
-        {/* Lower (left/right) */}
-        <group rotation={[0, Math.PI / 2, 0]}>
-          <WindowFace weeklyCommits={baseWeeks} peak={weeklyMax}
-            floorCount={setbackAt} winsPerRow={3} floorHeight={floorHeight}
-            faceW={baseD} offsetZ={baseW / 2 + 0.025} weekOffset={Math.floor(baseWeeks.length / 2)} />
-          <WindowFace weeklyCommits={baseWeeks} peak={weeklyMax}
-            floorCount={setbackAt} winsPerRow={3} floorHeight={floorHeight}
-            faceW={baseD} offsetZ={-(baseW / 2 + 0.025)} weekOffset={Math.floor(baseWeeks.length / 3)} />
-        </group>
-      </group>
-
-      {/* ── WINDOWS: Upper tower ── */}
-      <group position={[0, setbackAt * floorHeight + 0.76, 0]}>
-        <WindowFace weeklyCommits={topWeeks} peak={weeklyMax}
-          floorCount={floorCount - setbackAt} winsPerRow={3} floorHeight={floorHeight}
-          faceW={topW} offsetZ={topD / 2 + 0.025} />
-        <WindowFace weeklyCommits={topWeeks} peak={weeklyMax}
-          floorCount={floorCount - setbackAt} winsPerRow={3} floorHeight={floorHeight}
-          faceW={topW} offsetZ={-(topD / 2 + 0.025)} />
-        <group rotation={[0, Math.PI / 2, 0]}>
-          <WindowFace weeklyCommits={topWeeks} peak={weeklyMax}
-            floorCount={floorCount - setbackAt} winsPerRow={2} floorHeight={floorHeight}
-            faceW={topD} offsetZ={topW / 2 + 0.025} weekOffset={Math.floor(topWeeks.length / 2)} />
-          <WindowFace weeklyCommits={topWeeks} peak={weeklyMax}
-            floorCount={floorCount - setbackAt} winsPerRow={2} floorHeight={floorHeight}
-            faceW={topD} offsetZ={-(topW / 2 + 0.025)} weekOffset={Math.floor(topWeeks.length / 3)} />
-        </group>
-      </group>
+      {/* ── ALL WINDOWS (Instanced) ── */}
+      {allWindows.length > 0 && (
+        <instancedMesh ref={instancedMeshRef} args={[null, null, allWindows.length]}>
+          <boxGeometry args={[0.2, 0.28, 0.03]} />
+          <meshBasicMaterial color="#ffffff" toneMapped={false} />
+        </instancedMesh>
+      )}
 
       {/* ── Rooftop penthouse ── */}
       <mesh position={[0, actualHeight + 0.76 + 0.35, 0]} castShadow>
         <boxGeometry args={[topW * 0.6, 0.7, topD * 0.6]} />
         <meshStandardMaterial color="#0a0a14" roughness={0.3} metalness={0.9}
-          emissive={accentColor} emissiveIntensity={0.15} />
+          emissive={accentColor} emissiveIntensity={0.25} />
       </mesh>
 
       {/* ── Antenna spire ── */}
@@ -245,24 +234,11 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
         <meshStandardMaterial color="#4a4a58" roughness={0.2} metalness={1.0} />
       </mesh>
 
-      {/* ── Antenna red beacon ── */}
+      {/* ── Antenna red beacon (Faked light via emissive material) ── */}
       <mesh position={[0, actualHeight + 0.76 + 0.7 + 3.6, 0]}>
         <sphereGeometry args={[0.09, 8, 8]} />
-        <meshStandardMaterial color="#ff1010" emissive="#ff0000" emissiveIntensity={3} />
+        <meshStandardMaterial ref={antennaMatRef} color="#ff1010" emissive="#ff0000" emissiveIntensity={3} toneMapped={false} />
       </mesh>
-      <pointLight
-        ref={antennaRef}
-        position={[0, actualHeight + 0.76 + 0.7 + 3.6, 0]}
-        color="#ff0000" intensity={1.5} distance={5}
-      />
-
-      {/* ── Base glow (language-colored) ── */}
-      <pointLight
-        position={[0, 1.2, 0]}
-        color={accentColor}
-        intensity={0.8 + actRatio * 1.5}
-        distance={7}
-      />
 
       {/* ── Repo name label ── */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
@@ -288,3 +264,4 @@ export default function Building({ repo, position, isHovered, onPointerOver, onP
     </group>
   );
 }
+

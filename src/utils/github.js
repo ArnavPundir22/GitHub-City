@@ -3,6 +3,10 @@ import axios from 'axios';
 const BASE = 'https://api.github.com';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const headers = import.meta.env.VITE_GITHUB_TOKEN
+  ? { Authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}` }
+  : {};
+
 // ── Language accent colors (GitHub's official palette) ──────────────────────
 export const LANGUAGE_COLORS = {
   JavaScript:  '#f1e05a',
@@ -37,7 +41,7 @@ async function fetchParticipation(owner, repo, retries = 2) {
   try {
     const res = await axios.get(
       `${BASE}/repos/${owner}/${repo}/stats/participation`,
-      { timeout: 6000 }
+      { headers, timeout: 6000 }
     );
     // 202 = GitHub is computing stats, retry after delay
     if (res.status === 202 && retries > 0) {
@@ -74,7 +78,8 @@ async function fetchAllRepos(username) {
   let page = 1;
   while (true) {
     const res = await axios.get(
-      `${BASE}/users/${username}/repos?sort=pushed&per_page=100&page=${page}`
+      `${BASE}/users/${username}/repos?sort=pushed&per_page=100&page=${page}`,
+      { headers, timeout: 6000 }
     );
     allRepos.push(...res.data);
     // Stop when we get fewer than 100 — no more pages
@@ -87,7 +92,7 @@ async function fetchAllRepos(username) {
 // ── Main export: fetch a user's full city data ───────────────────────────────
 export async function fetchUserCity(username) {
   const [userRes, rawRepos] = await Promise.all([
-    axios.get(`${BASE}/users/${username}`),
+    axios.get(`${BASE}/users/${username}`, { headers, timeout: 6000 }),
     fetchAllRepos(username),
   ]);
 

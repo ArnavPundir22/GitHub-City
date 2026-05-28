@@ -70,7 +70,7 @@ function CitySceneContents({ repos, hoveredRepo, onHover }) {
       <directionalLight
         position={[-25, 50, -15]} intensity={0.9} color="#c8d8ff"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-far={150}
         shadow-camera-left={-60} shadow-camera-right={60}
         shadow-camera-top={60} shadow-camera-bottom={-60}

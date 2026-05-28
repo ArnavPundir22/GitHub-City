@@ -66,12 +66,14 @@ function RepoCard({ repo, isHovered, onMouseEnter, onMouseLeave }) {
 // ── Main Overlay ──────────────────────────────────────────────────────────────
 export default function Overlay({ cityData, isLoading, onSearch, hoveredRepo, onHoverRepo }) {
   const [input, setInput] = useState('');
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
       onSearch(input.trim());
       setInput('');
+      setIsMobileDrawerOpen(false);
     }
   };
 
@@ -108,9 +110,19 @@ export default function Overlay({ cityData, isLoading, onSearch, hoveredRepo, on
         )}
       </div>
 
+      {/* ── Mobile drawer toggle ── */}
+      {cityData && (
+        <button 
+          className="mobile-drawer-toggle fade-in" 
+          onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
+        >
+          {isMobileDrawerOpen ? '↓ Hide Profile & Repos' : '↑ View Profile & Repos'}
+        </button>
+      )}
+
       {/* ── Left panel: User profile + repo list ── */}
       {cityData && (
-        <div className="side-panel glass-panel fade-in">
+        <div className={`side-panel glass-panel fade-in ${isMobileDrawerOpen ? 'is-open' : ''}`}>
 
           {/* Profile */}
           <div className="profile-section">
